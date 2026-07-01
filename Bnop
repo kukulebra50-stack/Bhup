@@ -1,0 +1,476 @@
+-- BHop Accelerator + Knife Changer + Force First Person (No Speed Limit + Studs/s)
+local player = game.Players.LocalPlayer
+local uis = game:GetService("UserInputService")
+local runService = game:GetService("RunService")
+local camera = workspace.CurrentCamera
+
+-- ============================================
+-- GUI СОЗДАНИЕ
+-- ============================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = game.CoreGui
+
+-- Главный фрейм
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 250, 0, 370)
+mainFrame.Position = UDim2.new(0.5, -125, 0.3, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+local corner = Instance.new("UICorner", mainFrame)
+corner.CornerRadius = UDim.new(0, 6)
+
+-- Заголовок
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+title.Text = "🔥 BHOP + KNIFE GUI"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+title.Parent = mainFrame
+
+-- ============================================
+-- ОТОБРАЖЕНИЕ СКОРОСТИ НА ЭКРАНЕ (как в CS)
+-- ============================================
+local speedDisplay = Instance.new("TextLabel")
+speedDisplay.Size = UDim2.new(0, 150, 0, 35)
+speedDisplay.Position = UDim2.new(0.5, -75, 0.85, 0)
+speedDisplay.BackgroundTransparency = 0.7
+speedDisplay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+speedDisplay.Text = "0.0 u/s"
+speedDisplay.TextColor3 = Color3.fromRGB(255, 255, 100)
+speedDisplay.Font = Enum.Font.GothamBold
+speedDisplay.TextSize = 22
+speedDisplay.Parent = screenGui
+
+local speedCorner = Instance.new("UICorner", speedDisplay)
+speedCorner.CornerRadius = UDim.new(0, 4)
+
+-- ============================================
+-- СЕКЦИЯ BHOP
+-- ============================================
+local bhopLabel = Instance.new("TextLabel")
+bhopLabel.Size = UDim2.new(0.9, 0, 0, 20)
+bhopLabel.Position = UDim2.new(0.05, 0, 0.1, 0)
+bhopLabel.BackgroundTransparency = 1
+bhopLabel.Text = "🏃 BUNNYHOP"
+bhopLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+bhopLabel.Font = Enum.Font.GothamBold
+bhopLabel.TextSize = 13
+bhopLabel.TextXAlignment = Enum.TextXAlignment.Left
+bhopLabel.Parent = mainFrame
+
+-- Кнопка BHop
+local bhopButton = Instance.new("TextButton")
+bhopButton.Size = UDim2.new(0.8, 0, 0, 30)
+bhopButton.Position = UDim2.new(0.1, 0, 0.17, 0)
+bhopButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+bhopButton.Text = "BHop: OFF"
+bhopButton.TextColor3 = Color3.new(1, 1, 1)
+bhopButton.Font = Enum.Font.Gotham
+bhopButton.TextSize = 13
+bhopButton.Parent = mainFrame
+
+local buttonCorner1 = Instance.new("UICorner", bhopButton)
+buttonCorner1.CornerRadius = UDim.new(0, 4)
+
+-- Базовый множитель
+local baseLabel = Instance.new("TextLabel")
+baseLabel.Size = UDim2.new(0.8, 0, 0, 18)
+baseLabel.Position = UDim2.new(0.1, 0, 0.26, 0)
+baseLabel.BackgroundTransparency = 1
+baseLabel.Text = "Base Speed: 1.25x"
+baseLabel.TextColor3 = Color3.new(0.9, 0.9, 0.9)
+baseLabel.Font = Enum.Font.Gotham
+baseLabel.TextSize = 12
+baseLabel.TextXAlignment = Enum.TextXAlignment.Left
+baseLabel.Parent = mainFrame
+
+local baseSlider = Instance.new("TextBox")
+baseSlider.Size = UDim2.new(0.3, 0, 0, 20)
+baseSlider.Position = UDim2.new(0.6, 0, 0.26, 0)
+baseSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+baseSlider.Text = "1.25"
+baseSlider.TextColor3 = Color3.new(1, 1, 1)
+baseSlider.Font = Enum.Font.Gotham
+baseSlider.TextSize = 12
+baseSlider.Parent = mainFrame
+
+-- Множитель за прыжок
+local perJumpLabel = Instance.new("TextLabel")
+perJumpLabel.Size = UDim2.new(0.8, 0, 0, 18)
+perJumpLabel.Position = UDim2.new(0.1, 0, 0.32, 0)
+perJumpLabel.BackgroundTransparency = 1
+perJumpLabel.Text = "Per Jump: +0.25x"
+perJumpLabel.TextColor3 = Color3.new(0.9, 0.9, 0.9)
+perJumpLabel.Font = Enum.Font.Gotham
+perJumpLabel.TextSize = 12
+perJumpLabel.TextXAlignment = Enum.TextXAlignment.Left
+perJumpLabel.Parent = mainFrame
+
+local perJumpSlider = Instance.new("TextBox")
+perJumpSlider.Size = UDim2.new(0.3, 0, 0, 20)
+perJumpSlider.Position = UDim2.new(0.6, 0, 0.32, 0)
+perJumpSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+perJumpSlider.Text = "0.25"
+perJumpSlider.TextColor3 = Color3.new(1, 1, 1)
+perJumpSlider.Font = Enum.Font.Gotham
+perJumpSlider.TextSize = 12
+perJumpSlider.Parent = mainFrame
+
+-- Отображение текущей скорости (множитель)
+local currentSpeedLabel = Instance.new("TextLabel")
+currentSpeedLabel.Size = UDim2.new(0.9, 0, 0, 25)
+currentSpeedLabel.Position = UDim2.new(0.05, 0, 0.38, 0)
+currentSpeedLabel.BackgroundTransparency = 1
+currentSpeedLabel.Text = "Multiplier: 1.00x | Jumps: 0"
+currentSpeedLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+currentSpeedLabel.Font = Enum.Font.GothamBold
+currentSpeedLabel.TextSize = 11
+currentSpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
+currentSpeedLabel.Parent = mainFrame
+
+-- ============================================
+-- СЕКЦИЯ НОЖЕЙ
+-- ============================================
+local knifeLabel = Instance.new("TextLabel")
+knifeLabel.Size = UDim2.new(0.9, 0, 0, 20)
+knifeLabel.Position = UDim2.new(0.05, 0, 0.47, 0)
+knifeLabel.BackgroundTransparency = 1
+knifeLabel.Text = "🔪 KNIFE CHANGER"
+knifeLabel.TextColor3 = Color3.fromRGB(255, 150, 50)
+knifeLabel.Font = Enum.Font.GothamBold
+knifeLabel.TextSize = 13
+knifeLabel.TextXAlignment = Enum.TextXAlignment.Left
+knifeLabel.Parent = mainFrame
+
+-- Decal ID для картинок
+local knives = {
+    {name = "🦋 Butterfly", decalId = "7546640012"},
+    {name = "🔪 Karambit", decalId = "7546653235"},
+    {name = "🗡️ Bayonet", decalId = "7546638152"},
+    {name = "⚔️ M9 Bayonet", decalId = "7546645349"},
+    {name = "❌ None", decalId = nil}
+}
+
+local knifeButtons = {}
+
+-- Создаём ImageLabel для отображения ножа на экране
+local knifeDisplay = Instance.new("ImageLabel")
+knifeDisplay.Size = UDim2.new(0, 180, 0, 180)
+knifeDisplay.Position = UDim2.new(0.72, 0, 0.55, 0)
+knifeDisplay.BackgroundTransparency = 1
+knifeDisplay.Visible = false
+knifeDisplay.ScaleType = Enum.ScaleType.Fit
+knifeDisplay.Parent = screenGui
+
+for i, knife in ipairs(knives) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.8, 0, 0, 23)
+    btn.Position = UDim2.new(0.1, 0, 0.5 + (i * 0.055), 0)
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.Text = knife.name
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 11
+    btn.Parent = mainFrame
+    
+    local btnCorner = Instance.new("UICorner", btn)
+    btnCorner.CornerRadius = UDim.new(0, 3)
+    
+    btn.MouseButton1Click:Connect(function()
+        if knife.decalId then
+            knifeDisplay.Image = "rbxassetid://" .. knife.decalId
+            knifeDisplay.Visible = true
+            
+            for _, b in ipairs(knifeButtons) do
+                b.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            end
+            btn.BackgroundColor3 = Color3.fromRGB(255, 150, 50)
+        else
+            knifeDisplay.Visible = false
+            knifeDisplay.Image = ""
+            for _, b in ipairs(knifeButtons) do
+                b.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            end
+        end
+    end)
+    
+    table.insert(knifeButtons, btn)
+end
+
+-- ============================================
+-- ПРИНУДИТЕЛЬНОЕ ПЕРВОЕ ЛИЦО
+-- ============================================
+local fppLabel = Instance.new("TextLabel")
+fppLabel.Size = UDim2.new(0.9, 0, 0, 20)
+fppLabel.Position = UDim2.new(0.05, 0, 0.8, 0)
+fppLabel.BackgroundTransparency = 1
+fppLabel.Text = "👁️ FORCE FIRST PERSON"
+fppLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+fppLabel.Font = Enum.Font.GothamBold
+fppLabel.TextSize = 12
+fppLabel.TextXAlignment = Enum.TextXAlignment.Left
+fppLabel.Parent = mainFrame
+
+local fppButton = Instance.new("TextButton")
+fppButton.Size = UDim2.new(0.8, 0, 0, 25)
+fppButton.Position = UDim2.new(0.1, 0, 0.87, 0)
+fppButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+fppButton.Text = "First Person Lock: OFF"
+fppButton.TextColor3 = Color3.new(1, 1, 1)
+fppButton.Font = Enum.Font.Gotham
+fppButton.TextSize = 12
+fppButton.Parent = mainFrame
+
+local buttonCorner2 = Instance.new("UICorner", fppButton)
+buttonCorner2.CornerRadius = UDim.new(0, 4)
+
+-- ============================================
+-- ЛОГИКА BHOP С БЕСКОНЕЧНЫМ УСКОРЕНИЕМ + СКОРОСТЬ В STUDS/S
+-- ============================================
+local bhopEnabled = false
+local fppEnabled = false
+local baseMultiplier = 1.25
+local perJumpIncrease = 0.25
+local currentMultiplier = 1.0
+local jumpCount = 0
+local lastJumpTime = 0
+local jumpCooldown = 0.05
+local wasOnGround = true
+local jumpStreakBroken = false
+local lastPosition = nil
+local currentSpeed = 0
+
+-- Проверка земли
+local function checkGround()
+    local char = player.Character
+    if not char then return false end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return false end
+    
+    local ray = Ray.new(root.Position, Vector3.new(0, -3.5, 0))
+    local hit = workspace:FindPartOnRay(ray, char)
+    return hit ~= nil
+end
+
+-- Получение направления движения
+local function getMoveDirection()
+    local char = player.Character
+    if not char or not char:FindFirstChild("Humanoid") then return Vector3.new(0,0,0) end
+    
+    local humanoid = char.Humanoid
+    return humanoid.MoveDirection
+end
+
+-- Расчёт скорости в studs/секунду
+local function updateSpeedDisplay()
+    local char = player.Character
+    if not char then 
+        speedDisplay.Text = "0.0 u/s"
+        return 
+    end
+    
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then 
+        speedDisplay.Text = "0.0 u/s"
+        return 
+    end
+    
+    local currentPosition = root.Position
+    
+    if lastPosition then
+        local distance = (currentPosition - lastPosition).Magnitude
+        local deltaTime = 1/60 -- Примерно 60 FPS
+        if deltaTime > 0 then
+            currentSpeed = distance / deltaTime
+            speedDisplay.Text = string.format("%.1f u/s", currentSpeed)
+            
+            -- Меняем цвет в зависимости от скорости
+            if currentSpeed >= 200 then
+                speedDisplay.TextColor3 = Color3.fromRGB(255, 0, 0) -- Красный
+            elseif currentSpeed >= 100 then
+                speedDisplay.TextColor3 = Color3.fromRGB(255, 150, 0) -- Оранжевый
+            elseif currentSpeed >= 50 then
+                speedDisplay.TextColor3 = Color3.fromRGB(255, 255, 0) -- Жёлтый
+            else
+                speedDisplay.TextColor3 = Color3.fromRGB(255, 255, 255) -- Белый
+            end
+        end
+    end
+    
+    lastPosition = currentPosition
+end
+
+-- Основной цикл BHop с бесконечным ускорением
+runService.RenderStepped:Connect(function(dt)
+    -- Обновляем отображение скорости
+    updateSpeedDisplay()
+    
+    -- Принудительное первое лицо
+    if fppEnabled and player.Character then
+        player.CameraMode = Enum.CameraMode.LockFirstPerson
+        player.CameraMinZoomDistance = 0
+        player.CameraMaxZoomDistance = 0
+    end
+    
+    if not bhopEnabled then 
+        lastPosition = nil
+        speedDisplay.Text = "0.0 u/s"
+        speedDisplay.TextColor3 = Color3.fromRGB(255, 255, 100)
+        return 
+    end
+    
+    local onGround = checkGround()
+    
+    -- Проверяем, не прервалась ли серия прыжков
+    if not uis:IsKeyDown(Enum.KeyCode.Space) then
+        if jumpCount > 0 and onGround then
+            jumpStreakBroken = true
+        end
+    end
+    
+    if jumpStreakBroken and onGround then
+        -- Сброс серии
+        currentMultiplier = 1.0
+        jumpCount = 0
+        jumpStreakBroken = false
+        currentSpeedLabel.Text = "Multiplier: 1.00x | Jumps: 0"
+        currentSpeedLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    end
+    
+    if uis:IsKeyDown(Enum.KeyCode.Space) then
+        local char = player.Character
+        if not char then return end
+        
+        local humanoid = char:FindFirstChild("Humanoid")
+        local root = char:FindFirstChild("HumanoidRootPart")
+        
+        if humanoid and root and onGround then
+            local currentTime = tick()
+            if currentTime - lastJumpTime > jumpCooldown then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                lastJumpTime = currentTime
+                
+                -- Увеличиваем счётчик прыжков
+                jumpCount = jumpCount + 1
+                jumpStreakBroken = false
+                
+                -- БЕСКОНЕЧНЫЙ РОСТ МНОЖИТЕЛЯ
+                currentMultiplier = baseMultiplier + (perJumpIncrease * (jumpCount - 1))
+                
+                -- Обновляем GUI
+                currentSpeedLabel.Text = string.format("Multiplier: %.2fx | Jumps: %d", currentMultiplier, jumpCount)
+                
+                if currentMultiplier >= 10 then
+                    currentSpeedLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                elseif currentMultiplier >= 5 then
+                    currentSpeedLabel.TextColor3 = Color3.fromRGB(255, 150, 0)
+                else
+                    currentSpeedLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+                end
+                
+                -- Применяем ускорение
+                local moveDir = getMoveDirection()
+                if moveDir.Magnitude > 0 then
+                    local velocity = root.Velocity
+                    local boost = moveDir.Unit * (currentMultiplier * 12)
+                    root.Velocity = Vector3.new(
+                        velocity.X + boost.X,
+                        velocity.Y,
+                        velocity.Z + boost.Z
+                    )
+                end
+                
+                wasOnGround = true
+            end
+        end
+    end
+    
+    -- Отслеживание состояния земли
+    if onGround and not wasOnGround then
+        wasOnGround = true
+    end
+    if not onGround then
+        wasOnGround = false
+    end
+end)
+
+-- Установка скорости ходьбы
+runService.Heartbeat:Connect(function()
+    if bhopEnabled and player.Character then
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = 16 * currentMultiplier
+        end
+    end
+end)
+
+-- ============================================
+-- ОБРАБОТЧИКИ КНОПОК
+-- ============================================
+bhopButton.MouseButton1Click:Connect(function()
+    bhopEnabled = not bhopEnabled
+    if bhopEnabled then
+        bhopButton.Text = "BHop: ON"
+        bhopButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+        currentMultiplier = 1.0
+        jumpCount = 0
+        jumpStreakBroken = false
+        lastPosition = nil
+    else
+        bhopButton.Text = "BHop: OFF"
+        bhopButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        currentMultiplier = 1.0
+        jumpCount = 0
+        currentSpeedLabel.Text = "Multiplier: 1.00x | Jumps: 0"
+        currentSpeedLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        speedDisplay.Text = "0.0 u/s"
+        speedDisplay.TextColor3 = Color3.fromRGB(255, 255, 100)
+        if player.Character then
+            local humanoid = player.Character:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = 16
+            end
+        end
+    end
+end)
+
+fppButton.MouseButton1Click:Connect(function()
+    fppEnabled = not fppEnabled
+    if fppEnabled then
+        fppButton.Text = "First Person Lock: ON"
+        fppButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+        player.CameraMode = Enum.CameraMode.LockFirstPerson
+    else
+        fppButton.Text = "First Person Lock: OFF"
+        fppButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        player.CameraMode = Enum.CameraMode.Classic
+    end
+end)
+
+baseSlider.FocusLost:Connect(function()
+    local num = tonumber(baseSlider.Text)
+    if num and num >= 1 then
+        baseMultiplier = num
+        baseLabel.Text = "Base Speed: " .. num .. "x"
+    else
+        baseSlider.Text = tostring(baseMultiplier)
+    end
+end)
+
+perJumpSlider.FocusLost:Connect(function()
+    local num = tonumber(perJumpSlider.Text)
+    if num and num >= 0.01 then
+        perJumpIncrease = num
+        perJumpLabel.Text = "Per Jump: +" .. num .. "x"
+    else
+        perJumpSlider.Text = tostring(perJumpIncrease)
+    end
+end)
+
+print("BHop Accelerator v4 loaded! Speed display active! 🚀")
