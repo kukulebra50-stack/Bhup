@@ -1,8 +1,7 @@
--- BHop Accelerator + Force First Person (Clean GUI, Speed/sec, Save on stop)
+-- BHop Accelerator (Fixed Speed Accumulation, No FPP Button)
 local player = game.Players.LocalPlayer
 local uis = game:GetService("UserInputService")
 local runService = game:GetService("RunService")
-local camera = workspace.CurrentCamera
 
 -- ============================================
 -- GUI СОЗДАНИЕ (Красивый дизайн)
@@ -11,7 +10,7 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = game.CoreGui
 screenGui.Name = "BhopAccelerator"
 
--- Главный фрейм с градиентным эффектом
+-- Главный фрейм
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 280, 0, 180)
 mainFrame.Position = UDim2.new(0.5, -140, 0.35, 0)
@@ -21,25 +20,17 @@ mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = screenGui
 
--- Тень/обводка
-local shadow = Instance.new("Frame")
-shadow.Size = UDim2.new(1, 4, 1, 4)
-shadow.Position = UDim2.new(0, -2, 0, -2)
-shadow.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-shadow.BorderSizePixel = 0
-shadow.Parent = mainFrame
-shadow.ZIndex = 0
-
 local corner = Instance.new("UICorner", mainFrame)
 corner.CornerRadius = UDim.new(0, 10)
 
--- Заголовок с акцентной полосой
+-- Акцентная полоса
 local accentBar = Instance.new("Frame")
 accentBar.Size = UDim2.new(1, 0, 0, 3)
 accentBar.BackgroundColor3 = Color3.fromRGB(130, 100, 255)
 accentBar.BorderSizePixel = 0
 accentBar.Parent = mainFrame
 
+-- Заголовок
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 35)
 title.Position = UDim2.new(0, 0, 0, 5)
@@ -100,7 +91,7 @@ toggleButton.Parent = mainFrame
 local toggleCorner = Instance.new("UICorner", toggleButton)
 toggleCorner.CornerRadius = UDim.new(0, 6)
 
--- Настройки множителя
+-- Настройки
 local settingsLabel = Instance.new("TextLabel")
 settingsLabel.Size = UDim2.new(0.9, 0, 0, 18)
 settingsLabel.Position = UDim2.new(0.05, 0, 0.48, 0)
@@ -134,7 +125,7 @@ speedPerSecInput.Font = Enum.Font.Gotham
 speedPerSecInput.TextSize = 11
 speedPerSecInput.Parent = mainFrame
 
--- Информация о текущей скорости
+-- Информация о скорости
 local infoFrame = Instance.new("Frame")
 infoFrame.Size = UDim2.new(0.9, 0, 0, 40)
 infoFrame.Position = UDim2.new(0.05, 0, 0.72, 0)
@@ -158,7 +149,7 @@ local multiplierInfoText = Instance.new("TextLabel")
 multiplierInfoText.Size = UDim2.new(1, 0, 0, 16)
 multiplierInfoText.Position = UDim2.new(0, 0, 0, 22)
 multiplierInfoText.BackgroundTransparency = 1
-multiplierInfoText.Text = "x1.00 | Time: 0s"
+multiplierInfoText.Text = "x1.00 | Time: 0.0s"
 multiplierInfoText.TextColor3 = Color3.fromRGB(150, 150, 170)
 multiplierInfoText.Font = Enum.Font.Gotham
 multiplierInfoText.TextSize = 11
@@ -198,35 +189,19 @@ speedoUnit.TextSize = 10
 speedoUnit.Parent = speedometer
 
 -- ============================================
--- ПРИНУДИТЕЛЬНОЕ ПЕРВОЕ ЛИЦО (скрытая кнопка)
--- ============================================
-local fppEnabled = false
-local fppButton = Instance.new("TextButton")
-fppButton.Size = UDim2.new(0, 30, 0, 30)
-fppButton.Position = UDim2.new(0.88, 0, 0.02, 0)
-fppButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-fppButton.Text = "👁️"
-fppButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-fppButton.Font = Enum.Font.Gotham
-fppButton.TextSize = 14
-fppButton.Parent = mainFrame
-local fppCorner = Instance.new("UICorner", fppButton)
-fppCorner.CornerRadius = UDim.new(0, 15)
-
--- ============================================
 -- ЛОГИКА
 -- ============================================
 local bhopEnabled = false
 local speedPerSec = 0.15
 local currentMultiplier = 1.0
-local activeTime = 0
+local accumulatedTime = 0
 local lastJumpTime = 0
 local jumpCooldown = 0.05
 local lastPosition = nil
 local currentSpeed = 0
 local isMoving = false
 local stopTimer = 0
-local stopThreshold = 0.5 -- секунд без движения для сброса
+local stopThreshold = 0.5
 
 -- Проверка земли
 local function checkGround()
@@ -240,32 +215,18 @@ local function checkGround()
     return hit ~= nil
 end
 
--- Проверка движения
-local function isPlayerMoving()
-    local char = player.Character
-    if not char then return false end
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if not root then return false end
-    
-    if lastPosition then
-        local distance = (root.Position - lastPosition).Magnitude
-        return distance > 0.5
-    end
-    return false
-end
-
 -- Расчёт скорости
 local function updateSpeed()
     local char = player.Character
     if not char then 
         currentSpeed = 0
-        return 
+        return false
     end
     
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then 
         currentSpeed = 0
-        return 
+        return false
     end
     
     local currentPos = root.Position
@@ -276,14 +237,17 @@ local function updateSpeed()
         if deltaTime > 0 then
             currentSpeed = distance / deltaTime
         end
+        lastPosition = currentPos
+        return distance > 0.3
     end
     
     lastPosition = currentPos
+    return false
 end
 
 -- Основной цикл
 runService.RenderStepped:Connect(function(dt)
-    updateSpeed()
+    local moving = updateSpeed()
     
     -- Обновление спидометра
     speedoText.Text = string.format("%.1f", currentSpeed)
@@ -304,48 +268,28 @@ runService.RenderStepped:Connect(function(dt)
         speedInfoText.TextColor3 = Color3.fromRGB(200, 200, 200)
     end
     
-    -- Принудительное первое лицо
-    if fppEnabled and player.Character then
-        player.CameraMode = Enum.CameraMode.LockFirstPerson
-        player.CameraMinZoomDistance = 0
-        player.CameraMaxZoomDistance = 0
-    end
-    
     if not bhopEnabled then 
         lastPosition = nil
         currentMultiplier = 1.0
-        activeTime = 0
+        accumulatedTime = 0
         return 
     end
     
-    -- Проверка движения для таймера сброса
-    if isPlayerMoving() then
+    -- Логика движения и накопления скорости
+    if moving then
         isMoving = true
         stopTimer = 0
-    else
-        if isMoving then
-            stopTimer = stopTimer + dt
-            if stopTimer >= stopThreshold then
-                -- Полная остановка - сброс скорости
-                isMoving = false
-                currentMultiplier = 1.0
-                activeTime = 0
-                multiplierInfoText.Text = "x1.00 | Time: 0s"
-                multiplierInfoText.TextColor3 = Color3.fromRGB(150, 150, 170)
-            end
-        end
-    end
-    
-    -- Накапливание скорости каждую секунду при движении и прыжках
-    if isMoving then
-        activeTime = activeTime + dt
+        accumulatedTime = accumulatedTime + dt
         
-        -- Увеличиваем множитель каждую секунду
-        if activeTime >= 1.0 then
-            currentMultiplier = currentMultiplier + speedPerSec
-            activeTime = activeTime - 1.0
+        -- Каждую секунду увеличиваем множитель
+        if accumulatedTime >= 1.0 then
+            local secondsPassed = math.floor(accumulatedTime)
+            currentMultiplier = currentMultiplier + (speedPerSec * secondsPassed)
+            accumulatedTime = accumulatedTime - secondsPassed
             
-            multiplierInfoText.Text = string.format("x%.2f | Time: %ds", currentMultiplier, math.floor(activeTime * 10) / 10)
+            -- Обновляем информацию
+            multiplierInfoText.Text = string.format("x%.2f | Time: %.1fs", currentMultiplier, accumulatedTime)
+            
             if currentMultiplier >= 10 then
                 multiplierInfoText.TextColor3 = Color3.fromRGB(255, 50, 50)
             elseif currentMultiplier >= 5 then
@@ -353,10 +297,26 @@ runService.RenderStepped:Connect(function(dt)
             else
                 multiplierInfoText.TextColor3 = Color3.fromRGB(130, 255, 130)
             end
+        else
+            -- Обновляем информацию даже без изменения множителя
+            multiplierInfoText.Text = string.format("x%.2f | Time: %.1fs", currentMultiplier, accumulatedTime)
+        end
+    else
+        if isMoving then
+            stopTimer = stopTimer + dt
+            if stopTimer >= stopThreshold then
+                -- Полная остановка - сброс
+                isMoving = false
+                currentMultiplier = 1.0
+                accumulatedTime = 0
+                stopTimer = 0
+                multiplierInfoText.Text = "x1.00 | Time: 0.0s"
+                multiplierInfoText.TextColor3 = Color3.fromRGB(150, 150, 170)
+            end
         end
     end
     
-    -- BHop прыжки при зажатом пробеле
+    -- BHop прыжки
     if uis:IsKeyDown(Enum.KeyCode.Space) then
         local char = player.Character
         if not char then return end
@@ -371,10 +331,10 @@ runService.RenderStepped:Connect(function(dt)
                 lastJumpTime = currentTime
                 
                 -- Применяем ускорение
-                local humanoidMoveDir = humanoid.MoveDirection
-                if humanoidMoveDir.Magnitude > 0 then
+                local moveDir = humanoid.MoveDirection
+                if moveDir.Magnitude > 0 then
                     local velocity = root.Velocity
-                    local boost = humanoidMoveDir.Unit * (currentMultiplier * 12)
+                    local boost = moveDir.Unit * (currentMultiplier * 12)
                     root.Velocity = Vector3.new(
                         velocity.X + boost.X,
                         velocity.Y,
@@ -397,7 +357,7 @@ runService.Heartbeat:Connect(function()
 end)
 
 -- ============================================
--- ОБРАБОТЧИКИ
+-- ОБРАБОТЧИКИ КНОПОК
 -- ============================================
 toggleButton.MouseButton1Click:Connect(function()
     bhopEnabled = not bhopEnabled
@@ -408,7 +368,7 @@ toggleButton.MouseButton1Click:Connect(function()
         statusText.Text = "ACTIVE"
         statusText.TextColor3 = Color3.fromRGB(130, 255, 130)
         currentMultiplier = 1.0
-        activeTime = 0
+        accumulatedTime = 0
         isMoving = false
         stopTimer = 0
         lastPosition = nil
@@ -419,30 +379,17 @@ toggleButton.MouseButton1Click:Connect(function()
         statusText.Text = "INACTIVE"
         statusText.TextColor3 = Color3.fromRGB(255, 100, 100)
         currentMultiplier = 1.0
-        activeTime = 0
+        accumulatedTime = 0
         speedoText.Text = "0.0"
         speedoText.TextColor3 = Color3.fromRGB(255, 255, 255)
         speedInfoText.Text = "SPEED: 0.0 u/s"
-        multiplierInfoText.Text = "x1.00 | Time: 0s"
+        multiplierInfoText.Text = "x1.00 | Time: 0.0s"
         if player.Character then
             local humanoid = player.Character:FindFirstChild("Humanoid")
             if humanoid then
                 humanoid.WalkSpeed = 16
             end
         end
-    end
-end)
-
-fppButton.MouseButton1Click:Connect(function()
-    fppEnabled = not fppEnabled
-    if fppEnabled then
-        fppButton.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
-        fppButton.Text = "👁️✓"
-        player.CameraMode = Enum.CameraMode.LockFirstPerson
-    else
-        fppButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        fppButton.Text = "👁️"
-        player.CameraMode = Enum.CameraMode.Classic
     end
 end)
 
@@ -456,4 +403,4 @@ speedPerSecInput.FocusLost:Connect(function()
     end
 end)
 
-print("BHop Pro loaded! Speed/sec + Save on stop! 🚀")
+print("BHop Pro v2 loaded! Fixed speed accumulation! 🚀")
